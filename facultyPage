@@ -1,0 +1,79 @@
+var express = require('express');
+var multer = require('multer');
+var mongoose = require('mongoose');
+var path = require('path');
+var bodyParser = require('body-parser');
+var csv = require('csvtojson');
+var studentSchema = require('./facultyModel');
+
+var storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './public/uploads')
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname)
+    },
+});
+var uploads = multer({ storage: storage });
+mongoose
+    .connect('mongodb://localhost:27017/facultydb', { useNewUrlParser: true })
+    .then(() => console.log('Connected'))
+    .catch((err) => console.log(err))
+
+var facultyPage = express();// fo
+facultyPage.set('view engine', 'ejs');
+facultyPage.use(bodyParser.urlencoded({extended:false}));
+facultyPage.use(express.static(path.resolve(__dirname,'public')));
+facultyPage.get('/', (req, res) => {
+    facultySchema.find((err, data) => {
+        if (err) {
+        } else {
+            if (data != '') {
+                res.render('index', { data: data })
+            } else {
+                res.render('index', { data: '' })
+            }
+        }
+    })
+})
+var facultyResponse
+facultyPage.post('/', uploads.single('csvFile'), (req, res) => {
+    csv()
+        .fromFile(req.file.path)
+        .then((response) => {
+            for (var x = 0; x < response; x++) {
+                facultyResponse = parseFloat(response[x].srNum)
+                response[x].srNum = facultyResponse
+                facultyResponse = parseFloat(response[x].name)
+                response[x].name = facultyResponse
+                facultyResponse = parseFloat(response[x].empID)
+                response[x].empID = facultyResponse
+                facultyResponse = parseFloat(response[x].PAN)
+                response[x].PAN = facultyResponse
+                facultyResponse = parseFloat(response[x].adhaarNum)
+                response[x].adhaarNum = facultyResponse
+                facultyResponse = parseFloat(response[x].highestDegree)
+                response[x].highestDegree = facultyResponse
+                facultyResponse = parseFloat(response[x].degreeDate)
+                response[x].degreeDate = facultyResponse
+                facultyResponse = parseFloat(response[x].specializatio)
+                response[x].specializatio = facultyResponse
+                facultyResponse = parseFloat(response[x].currentDesignation)
+                response[x].currentDesignation = facultyResponse
+                facultyResponse = parseFloat(response[x].dateOfDesignationAsProff)
+                response[x].dateOfDesignationAsProff = facultyResponse
+                facultyResponse = parseFloat(response[x].dateOfJoining)
+                response[x].dateOfJoining = facultyResponse
+                
+            }
+            facultySchema.insertMany(response, (err, data) => {
+                if (err) {
+                    console.log(err)
+                } else {
+                    res.redirect('/')
+                }
+            })
+        })
+})
+var port = process.env.PORT || 5555
+facultyPage.listen(port, () => console.log('Faculty Page connected on: ' + port))
